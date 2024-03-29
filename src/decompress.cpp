@@ -35,6 +35,7 @@
 
 // Caution: LzmaDec also pulls in windows.h!
 #define NOMINMAX
+
 #include "LzmaDec.h"
 #include "Xz.h"
 // CRC table needs to be generated prior to reading XZ compressed files.
@@ -44,10 +45,10 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "fs_files.hpp"
+#include "zdfs/files.hpp"
+#include "zdfs/decompress.hpp"
 #include "files_internal.h"
 #include "ancientzip.h"
-#include "decompress.hpp"
 
 namespace zdfs {
 	using namespace byteswap;

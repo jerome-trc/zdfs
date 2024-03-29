@@ -35,13 +35,13 @@
 */
 
 #include <miniz.h>
-#include "resourcefile.hpp"
+
+#include "zdfs/resourcefile.hpp"
+#include "zdfs/decompress.hpp"
 #include "md5.hpp"
 #include "fs_stringpool.h"
-#include "files_internal.h"
 #include "unicode.h"
 #include "findfile.hpp"
-#include "decompress.hpp"
 #include "wildcards.hpp"
 
 namespace zdfs {

@@ -32,7 +32,7 @@
 **
 */
 
-#include "resourcefile.hpp"
+#include "zdfs/resourcefile.hpp"
 
 namespace zdfs {
 //==========================================================================

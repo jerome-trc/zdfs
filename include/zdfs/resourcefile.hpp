@@ -6,7 +6,8 @@
 #include <limits.h>
 #include <vector>
 #include <string>
-#include "fs_files.hpp"
+
+#include "files.hpp"
 #include "decompress.hpp"
 
 namespace zdfs {

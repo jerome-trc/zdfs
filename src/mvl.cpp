@@ -35,8 +35,8 @@
 */
 
 
-#include "resourcefile.hpp"
-#include "swap.hpp"
+#include "zdfs/resourcefile.hpp"
+#include "zdfs/swap.hpp"
 
 namespace zdfs {
     using namespace byteswap;

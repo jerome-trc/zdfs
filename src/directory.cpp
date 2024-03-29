@@ -36,7 +36,7 @@
 
 #include <sys/stat.h>
 
-#include "resourcefile.hpp"
+#include "zdfs/resourcefile.hpp"
 #include "findfile.hpp"
 #include "fs_stringpool.h"
 

@@ -37,9 +37,9 @@
 #include <stdexcept>
 #include "zip.hpp"
 #include "ancientzip.h"
-#include "resourcefile.hpp"
+#include "zdfs/resourcefile.hpp"
 #include "findfile.hpp"
-#include "swap.hpp"
+#include "zdfs/swap.hpp"
 #include "fs_stringpool.h"
 
 namespace zdfs {

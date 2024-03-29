@@ -1,5 +1,6 @@
 #pragma once
-#include "fs_files.hpp"
+
+#include "files.hpp"
 
 namespace zdfs {
 

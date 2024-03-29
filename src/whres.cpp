@@ -34,9 +34,9 @@
 **
 */
 
-#include "resourcefile.hpp"
+#include "zdfs/resourcefile.hpp"
+#include "zdfs/swap.hpp"
 #include "fs_stringpool.h"
-#include "swap.hpp"
 
 namespace zdfs {
 	using namespace byteswap;

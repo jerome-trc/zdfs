@@ -33,15 +33,15 @@
 **
 */
 
+#include <mutex>
+
 // Note that 7z made the unwise decision to include windows.h :(
 #include "7z.h"
 #include "7zCrc.h"
-#include "resourcefile.hpp"
+#include "zdfs/resourcefile.hpp"
 #include "findfile.hpp"
 #include "unicode.h"
 #include "critsec.h"
-#include <mutex>
-
 
 namespace zdfs {
 

@@ -41,7 +41,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "resourcefile.hpp"
+#include "zdfs/resourcefile.hpp"
 #include "zdfs/filesystem.hpp"
 #include "findfile.hpp"
 #include "md5.hpp"
