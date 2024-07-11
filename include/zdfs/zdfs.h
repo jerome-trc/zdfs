@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -14,6 +15,15 @@ extern "C" {
 #else
 #define ZDFS_NODISCARD
 #endif
+
+typedef int32_t zdfs_WadNum;
+typedef int32_t zdfs_LumpNum;
+
+typedef struct zdfs_FileSys zdfs_FileSys;
+
+void zdfs_fs_free(const zdfs_FileSys* const);
+
+ZDFS_NODISCARD zdfs_FileSys* zdfs_fs_new(void);
 
 #if defined(__cplusplus)
 }
