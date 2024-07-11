@@ -19,10 +19,13 @@ extern "C" {
 typedef int32_t zdfs_WadNum;
 typedef int32_t zdfs_LumpNum;
 
+/// @see zdfs_fs_new
 typedef struct zdfs_FileSys zdfs_FileSys;
 
+/// @brief Destroys a filesystem instance.
 void zdfs_fs_free(const zdfs_FileSys* const);
 
+/// @returns A pointer to an empty filesystem instance allocated on the heap.
 ZDFS_NODISCARD zdfs_FileSys* zdfs_fs_new(void);
 
 #if defined(__cplusplus)
