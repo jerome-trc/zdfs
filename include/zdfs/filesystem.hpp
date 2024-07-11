@@ -9,12 +9,10 @@
 
 namespace zdfs {
 
-union LumpShortName
-{
-	char		String[9];
-
-	uint32_t		dword;			// These are for accessing the first 4 or 8 chars of
-	uint64_t		qword;			// Name as a unit without breaking strict aliasing rules
+union LumpShortName {
+	char String[9];
+	uint32_t dword; // These are for accessing the first 4 or 8 chars of
+	uint64_t qword; // Name as a unit without breaking strict aliasing rules
 };
 
 struct FolderEntry
@@ -26,17 +24,16 @@ struct FolderEntry
 class FileSystem
 {
 public:
-	FileSystem();
+	FileSystem(FileSystemMessageFunc);
 	~FileSystem ();
 
-	// The wadnum for the IWAD
-	int GetIwadNum() { return IwadIndex; }
-	void SetIwadNum(int x) { IwadIndex = x; }
+	ZDFS_NODISCARD int GetIwadNum() const noexcept { return IwadIndex; }
+	void SetIwadNum(int x) noexcept { IwadIndex = x; }
 
-	int GetMaxIwadNum() { return MaxIwadIndex; }
-	void SetMaxIwadNum(int x) { MaxIwadIndex = x; }
+	ZDFS_NODISCARD int GetMaxIwadNum() const noexcept { return MaxIwadIndex; }
+	void SetMaxIwadNum(int x) noexcept { MaxIwadIndex = x; }
 
-	bool InitSingleFile(const char *filename, FileSystemMessageFunc Printf = nullptr);
+	bool InitSingleFile(const char *filename);
 	bool InitMultipleFiles (std::vector<std::string>& filenames, LumpFilterInfo* filter = nullptr, FileSystemMessageFunc Printf = nullptr, bool allowduplicates = false, FILE* hashfile = nullptr);
 	void AddFile (const char *filename, FileReader *wadinfo, LumpFilterInfo* filter, FileSystemMessageFunc Printf, FILE* hashfile);
 	int CheckIfResourceFileLoaded (const char *name) noexcept;
@@ -144,6 +141,8 @@ public:
 protected:
 
 	struct LumpRecord;
+
+	FileSystemMessageFunc Printf = nullptr;
 
 	std::vector<FResourceFile *> Files;
 	std::vector<LumpRecord> FileInfo;

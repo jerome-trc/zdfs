@@ -186,19 +186,9 @@ struct FileSystem::LumpRecord
 	}
 };
 
-// PUBLIC FUNCTION PROTOTYPES ----------------------------------------------
-
-// PRIVATE FUNCTION PROTOTYPES ---------------------------------------------
-
 static void PrintLastError (FileSystemMessageFunc Printf);
 
-// PUBLIC DATA DEFINITIONS -------------------------------------------------
-
-// CODE --------------------------------------------------------------------
-
-FileSystem::FileSystem()
-{
-}
+FileSystem::FileSystem(FileSystemMessageFunc printf) : Printf(printf) {}
 
 FileSystem::~FileSystem ()
 {
@@ -231,7 +221,7 @@ void FileSystem::DeleteAll ()
 //
 //==========================================================================
 
-bool FileSystem::InitSingleFile(const char* filename, FileSystemMessageFunc Printf)
+bool FileSystem::InitSingleFile(const char* filename)
 {
 	std::vector<std::string> filenames = { filename };
 	return InitMultipleFiles(filenames, nullptr, Printf);

@@ -30,8 +30,7 @@ struct LumpFilterInfo
 	std::function<void()> postprocessFunc;
 };
 
-enum class FSMessageLevel
-{
+enum class FSMessageLevel : int {
 	Error = 1,
 	Warning = 2,
 	Attention = 3,
