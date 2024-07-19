@@ -15,10 +15,9 @@ union LumpShortName {
 	uint64_t qword; // Name as a unit without breaking strict aliasing rules
 };
 
-struct FolderEntry
-{
+struct FolderEntry {
 	const char *name;
-	unsigned lumpnum;
+	uint32_t lumpnum;
 };
 
 class FileSystem
@@ -33,8 +32,8 @@ public:
 	ZDFS_NODISCARD int GetMaxIwadNum() const noexcept { return MaxIwadIndex; }
 	void SetMaxIwadNum(int x) noexcept { MaxIwadIndex = x; }
 
-	bool InitSingleFile(const char *filename);
-	bool InitMultipleFiles (std::vector<std::string>& filenames, LumpFilterInfo* filter = nullptr, FileSystemMessageFunc Printf = nullptr, bool allowduplicates = false, FILE* hashfile = nullptr);
+	bool init_single_file(const char *filename);
+	bool init_multiple_files (std::vector<std::string>& filenames, LumpFilterInfo* filter = nullptr, bool allowduplicates = false, FILE* hashfile = nullptr);
 	void AddFile (const char *filename, FileReader *wadinfo, LumpFilterInfo* filter, FileSystemMessageFunc Printf, FILE* hashfile);
 	int CheckIfResourceFileLoaded (const char *name) noexcept;
 	void AddAdditionalFile(const char* filename, FileReader* wadinfo = NULL) {}

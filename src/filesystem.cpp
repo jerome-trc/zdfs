@@ -221,34 +221,29 @@ void FileSystem::DeleteAll ()
 //
 //==========================================================================
 
-bool FileSystem::InitSingleFile(const char* filename)
+bool FileSystem::init_single_file(const char* filename)
 {
 	std::vector<std::string> filenames = { filename };
-	return InitMultipleFiles(filenames, nullptr, Printf);
+	return init_multiple_files(filenames, nullptr, Printf);
 }
 
-bool FileSystem::InitMultipleFiles (std::vector<std::string>& filenames, LumpFilterInfo* filter, FileSystemMessageFunc Printf, bool allowduplicates, FILE* hashfile)
-{
-	int numfiles;
-
-	// the first call here will designate a main thread which may use shared file readers. All other thewads have to open new file handles.
-	SetMainThread();
+bool FileSystem::init_multiple_files(
+	std::vector<std::string>& filenames,
+	LumpFilterInfo* filter,
+	bool allowduplicates,
+	FILE* hashfile
+) {
 	// open all the files, load headers, and count lumps
 	DeleteAll();
-	numfiles = 0;
 
 	stringpool = new StringPool(true);
 	stringpool->shared = true;	// will be used by all owned resource files.
 
 	// first, check for duplicates
-	if (allowduplicates)
-	{
-		for (size_t i=0;i<filenames.size(); i++)
-		{
-			for (size_t j=i+1;j<filenames.size(); j++)
-			{
-				if (filenames[i] == filenames[j])
-				{
+	if (allowduplicates) {
+		for (size_t i = 0; i < filenames.size(); i++) {
+			for (size_t j = i + 1; j < filenames.size(); j++) {
+				if (filenames[i] == filenames[j]) {
 					filenames.erase(filenames.begin() + j);
 					j--;
 				}
@@ -256,25 +251,30 @@ bool FileSystem::InitMultipleFiles (std::vector<std::string>& filenames, LumpFil
 		}
 	}
 
-	for(size_t i=0;i<filenames.size(); i++)
-	{
+	for (size_t i = 0; i < filenames.size(); i++) {
 		AddFile(filenames[i].c_str(), nullptr, filter, Printf, hashfile);
 
-		if (i == (unsigned)MaxIwadIndex) MoveLumpsInFolder("after_iwad/");
+		if (i == (unsigned)MaxIwadIndex) {
+			MoveLumpsInFolder("after_iwad/");
+		}
+
 		std::string path = "filter/%s";
 		path += Files.back()->GetHash();
 		MoveLumpsInFolder(path.c_str());
 	}
 
 	NumEntries = (uint32_t)FileInfo.size();
-	if (NumEntries == 0)
-	{
+
+	if (NumEntries == 0) {
 		return false;
 	}
-	if (filter && filter->postprocessFunc) filter->postprocessFunc();
+
+	if (filter && filter->postprocessFunc) {
+		filter->postprocessFunc();
+	}
 
 	// [RH] Set up hash table
-	InitHashChains ();
+	InitHashChains();
 	return true;
 }
 

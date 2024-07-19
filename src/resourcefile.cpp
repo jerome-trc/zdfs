@@ -48,12 +48,12 @@ namespace zdfs {
 
 // this is for restricting shared file readers to the main thread.
 thread_local bool mainThread;
-void SetMainThread()
-{
+
+extern "C" void zdfs_set_main_thread(void) {
 	// only set the global flag on the first thread calling this.
 	static bool done = false;
-	if (!done)
-	{
+
+	if (!done) {
 		mainThread = done = true;
 	}
 }

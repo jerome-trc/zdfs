@@ -42,7 +42,6 @@ enum class FSMessageLevel : int {
 // pass the text output function as parameter to avoid a hard dependency on higher level code.
 using FileSystemMessageFunc = int(*)(FSMessageLevel msglevel, const char* format, ...);
 
-
 class FResourceFile;
 
 // [RH] Namespaces from BOOM.
