@@ -74,7 +74,8 @@ public:
 
 class FileReader;
 
-// an opaque memory buffer to the file's content. Can either own the memory or just point to an external buffer.
+/// An opaque memory buffer to the file's content.
+/// Can either own the memory or just point to an external buffer.
 class FileData
 {
 	void* memory;
@@ -246,10 +247,17 @@ public:
 		mReader = nullptr;
 	}
 
+	/// Note: allocates to the heap!
 	bool OpenFile(const char *filename, Size start = 0, Size length = -1, bool buffered = false);
+
+	/// Note: allocates to the heap!
 	bool OpenFilePart(FileReader &parent, Size start, Size length);
-	bool OpenMemory(const void *mem, Size length);	// read directly from the buffer
-	bool OpenMemoryArray(FileData& data);	// take the given array
+
+	/// Note: allocates to the heap!
+	bool OpenMemory(const void *mem, Size length);
+
+	/// Take the given array.
+	bool OpenMemoryArray(FileData& data);
 
 	Size Tell() const
 	{

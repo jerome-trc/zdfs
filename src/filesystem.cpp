@@ -46,6 +46,7 @@
 #include "findfile.hpp"
 #include "md5.hpp"
 #include "fs_stringpool.h"
+#include "zdfs/zdfs.h"
 
 namespace zdfs {
 
@@ -63,13 +64,15 @@ static void UpperCopy(char* to, const char* from)
 		to[i] = 0;
 }
 
-
-//djb2
-static uint32_t MakeHash(const char* str, size_t length = SIZE_MAX)
-{
+/// @author djb2
+static uint32_t make_hash(const char* str, size_t length = SIZE_MAX) {
 	uint32_t hash = 5381;
 	uint32_t c;
-	while (length-- > 0 && (c = *str++)) hash = hash * 33 + (c | 32);
+
+	while (length-- > 0 && (c = *str++)) {
+		hash = hash * 33 + (c | 32);
+	}
+
 	return hash;
 }
 
@@ -86,7 +89,6 @@ static void md5Hash(FileReader& reader, uint8_t* digest)
 	}
 	md5_finish(&state, digest);
 }
-
 
 struct FileSystem::LumpRecord
 {
@@ -224,7 +226,7 @@ void FileSystem::DeleteAll ()
 bool FileSystem::init_single_file(const char* filename)
 {
 	std::vector<std::string> filenames = { filename };
-	return init_multiple_files(filenames, nullptr, Printf);
+	return init_multiple_files(filenames, nullptr, false);
 }
 
 bool FileSystem::init_multiple_files(
@@ -274,7 +276,7 @@ bool FileSystem::init_multiple_files(
 	}
 
 	// [RH] Set up hash table
-	InitHashChains();
+	init_hash_chains();
 	return true;
 }
 
@@ -491,20 +493,18 @@ int FileSystem::CheckNumForName (const char *name, int space) const
 	};
 	uint32_t i;
 
-	if (name == NULL)
-	{
-		return -1;
+	if (name == NULL) {
+		return ZDFS_NILLUMP;
 	}
 
 	// Let's not search for names that are longer than 8 characters and contain path separators
 	// They are almost certainly full path names passed to this function.
-	if (strlen(name) > 8 && strpbrk(name, "/."))
-	{
-		return -1;
+	if (strlen(name) > 8 && strpbrk(name, "/.")) {
+		return ZDFS_NILLUMP;
 	}
 
 	UpperCopy (uname, name);
-	i = FirstLumpIndex[MakeHash(uname, 8) % NumEntries];
+	i = FirstLumpIndex[make_hash(uname, 8) % NumEntries];
 
 	while (i != NULL_INDEX)
 	{
@@ -543,7 +543,7 @@ int FileSystem::CheckNumForName (const char *name, int space, int rfnum, bool ex
 	}
 
 	UpperCopy (uname, name);
-	i = FirstLumpIndex[MakeHash (uname, 8) % NumEntries];
+	i = FirstLumpIndex[make_hash (uname, 8) % NumEntries];
 
 	// If exact is true if will only find lumps in the same WAD, otherwise
 	// also those in earlier WADs.
@@ -593,16 +593,16 @@ int FileSystem::CheckNumForFullName (const char *name, bool trynormal, int names
 {
 	uint32_t i;
 
-	if (name == NULL)
-	{
-		return -1;
+	if (name == nullptr) {
+		return ZDFS_NILLUMP;
 	}
+
 	if (*name == '/') name++;	// ignore leading slashes in file names.
 	uint32_t *fli = ignoreext ? FirstLumpIndex_NoExt : FirstLumpIndex_FullName;
 	uint32_t *nli = ignoreext ? NextLumpIndex_NoExt : NextLumpIndex_FullName;
 	auto len = strlen(name);
 
-	for (i = fli[MakeHash(name) % NumEntries]; i != NULL_INDEX; i = nli[i])
+	for (i = fli[make_hash(name) % NumEntries]; i != NULL_INDEX; i = nli[i])
 	{
 		if (strnicmp(name, FileInfo[i].LongName, len)) continue;
 		if (FileInfo[i].LongName[len] == 0) break;	// this is a full match
@@ -615,11 +615,11 @@ int FileSystem::CheckNumForFullName (const char *name, bool trynormal, int names
 
 	if (i != NULL_INDEX) return i;
 
-	if (trynormal && strlen(name) <= 8 && !strpbrk(name, "./"))
-	{
+	if (trynormal && strlen(name) <= 8 && !strpbrk(name, "./")) {
 		return CheckNumForName(name, namespc);
 	}
-	return -1;
+
+	return ZDFS_NILLUMP;
 }
 
 int FileSystem::CheckNumForFullName (const char *name, int rfnum) const
@@ -631,7 +631,7 @@ int FileSystem::CheckNumForFullName (const char *name, int rfnum) const
 		return CheckNumForFullName (name);
 	}
 
-	i = FirstLumpIndex_FullName[MakeHash (name) % NumEntries];
+	i = FirstLumpIndex_FullName[make_hash (name) % NumEntries];
 
 	while (i != NULL_INDEX &&
 		(stricmp(name, FileInfo[i].LongName) || FileInfo[i].rfnum != rfnum))
@@ -683,7 +683,7 @@ int FileSystem::FindFileWithExtensions(const char* name, const char *const *exts
 	uint32_t* nli = NextLumpIndex_NoExt;
 	auto len = strlen(name);
 
-	for (i = fli[MakeHash(name) % NumEntries]; i != NULL_INDEX; i = nli[i])
+	for (i = fli[make_hash(name) % NumEntries]; i != NULL_INDEX; i = nli[i])
 	{
 		if (strnicmp(name, FileInfo[i].LongName, len)) continue;
 		if (FileInfo[i].LongName[len] != '.') continue;	// we are looking for extensions but this file doesn't have one.
@@ -752,52 +752,41 @@ int FileSystem::GetResource (int resid, const char *type, int filenum) const
 	return i;
 }
 
-//==========================================================================
-//
-// FileLength
-//
-// Returns the buffer size needed to load the given lump.
-//
-//==========================================================================
-
-ptrdiff_t FileSystem::FileLength (int lump) const
-{
-	if ((size_t)lump >= NumEntries)
-	{
-		return -1;
-	}
-	const auto &lump_p = FileInfo[lump];
-	return (int)lump_p.resfile->Length(lump_p.resindex);
-}
-
-//==========================================================================
-//
-//
-//
-//==========================================================================
-
-int FileSystem::GetFileFlags (int lump)
-{
-	if ((size_t)lump >= NumEntries)
-	{
+size_t FileSystem::entry_len(LumpNum num, bool& exists) const {
+	if ((int64_t)num >= (int64_t)this->NumEntries) {
+		exists = false;
 		return 0;
 	}
 
-	const auto& lump_p = FileInfo[lump];
-	return lump_p.resfile->GetEntryFlags(lump_p.resindex) ^ lump_p.flags;
+	const auto &lump_p = this->FileInfo[num];
+	exists = true;
+	return lump_p.resfile->Length(lump_p.resindex);
 }
 
-//==========================================================================
-//
-// InitHashChains
-//
-// Prepares the lumpinfos for hashing.
-// (Hey! This looks suspiciously like something from Boom! :-)
-//
-//==========================================================================
+ELumpFlags FileSystem::entry_flags(LumpNum lump, bool& exists) const {
+	if ((size_t)lump >= this->NumEntries) {
+		exists = false;
+		return RESFF_NONE;
+	}
 
-void FileSystem::InitHashChains (void)
+	const auto& lump_p = this->FileInfo[lump];
+	const auto ret0 = lump_p.resfile->GetEntryFlags(lump_p.resindex);
+	const auto ret1 = static_cast<ELumpFlags>(lump_p.flags);
+	return static_cast<ELumpFlags>(ret0 ^ lump_p.flags);
+}
+
+FileData FileSystem::entry_data(LumpNum lump) const {
+	if ((unsigned)lump >= (unsigned)this->FileInfo.size()) {
+		throw FileSystemException("entry_data: %u >= FileInfo.size()", lump);
+	}
+
+	return this->FileInfo[lump].resfile->Read(this->FileInfo[lump].resindex);
+}
+
+// Prepares the lumpinfos for hashing.
+void FileSystem::init_hash_chains(void)
 {
+	// (Hey! This looks suspiciously like something from Boom! :-)
 	unsigned int i, j;
 
 	NumEntries = (uint32_t)FileInfo.size();
@@ -813,36 +802,37 @@ void FileSystem::InitHashChains (void)
 	FirstLumpIndex_ResId = &Hashes[NumEntries * 6];
 	NextLumpIndex_ResId = &Hashes[NumEntries * 7];
 
-
 	// Now set up the chains
 	for (i = 0; i < (unsigned)NumEntries; i++)
 	{
-		j = MakeHash (FileInfo[i].shortName.String, 8) % NumEntries;
+		j = make_hash (FileInfo[i].shortName.String, 8) % NumEntries;
 		NextLumpIndex[i] = FirstLumpIndex[j];
 		FirstLumpIndex[j] = i;
 
 		// Do the same for the full paths
 		if (FileInfo[i].LongName[0] != 0)
 		{
-			j = MakeHash(FileInfo[i].LongName) % NumEntries;
+			j = make_hash(FileInfo[i].LongName) % NumEntries;
 			NextLumpIndex_FullName[i] = FirstLumpIndex_FullName[j];
 			FirstLumpIndex_FullName[j] = i;
 
 			std::string nameNoExt = FileInfo[i].LongName;
 			auto dot = nameNoExt.find_last_of('.');
 			auto slash = nameNoExt.find_last_of('/');
-			if ((dot > slash || slash == std::string::npos) && dot != std::string::npos) nameNoExt.resize(dot);
 
-			j = MakeHash(nameNoExt.c_str()) % NumEntries;
+			if ((dot > slash || slash == std::string::npos) && dot != std::string::npos)
+				nameNoExt.resize(dot);
+
+			j = make_hash(nameNoExt.c_str()) % NumEntries;
 			NextLumpIndex_NoExt[i] = FirstLumpIndex_NoExt[j];
 			FirstLumpIndex_NoExt[j] = i;
 
 			j = FileInfo[i].resourceId % NumEntries;
 			NextLumpIndex_ResId[i] = FirstLumpIndex_ResId[j];
 			FirstLumpIndex_ResId[j] = i;
-
 		}
 	}
+
 	FileInfo.shrink_to_fit();
 	Files.shrink_to_fit();
 }
@@ -1043,44 +1033,21 @@ int FileSystem::FindLumpFullName(const char* name, int* lastlump, bool noext)
 	return -1;
 }
 
-//==========================================================================
-//
-// W_CheckLumpName
-//
-//==========================================================================
-
-bool FileSystem::CheckFileName (int lump, const char *name)
-{
+bool FileSystem::CheckFileName(LumpNum lump, const char *name) {
 	if ((size_t)lump >= NumEntries)
 		return false;
 
 	return !strnicmp (FileInfo[lump].shortName.String, name, 8);
 }
 
-//==========================================================================
-//
-// GetLumpName
-//
-//==========================================================================
-
-const char* FileSystem::GetFileShortName(int lump) const
-{
+const char* FileSystem::entry_shortname(LumpNum lump) const {
 	if ((size_t)lump >= NumEntries)
 		return nullptr;
 	else
 		return FileInfo[lump].shortName.String;
 }
 
-//==========================================================================
-//
-// FileSystem :: GetFileFullName
-//
-// Returns the lump's full name if it has one or its short name if not.
-//
-//==========================================================================
-
-const char *FileSystem::GetFileFullName (int lump, bool returnshort) const
-{
+const char *FileSystem::entry_fullname(LumpNum lump, bool returnshort) const {
 	if ((size_t)lump >= NumEntries)
 		return NULL;
 	else if (FileInfo[lump].LongName[0] != 0)
@@ -1106,7 +1073,7 @@ std::string FileSystem::GetFileFullPath(int lump) const
 	{
 		foo = GetResourceFileName(FileInfo[lump].rfnum);
 		foo += ':';
-		foo += +GetFileFullName(lump);
+		foo += +entry_fullname(lump);
 	}
 	return foo;
 }
@@ -1246,42 +1213,25 @@ unsigned FileSystem::GetFilesInFolder(const char *inpath, std::vector<FolderEntr
 	return (unsigned)result.size();
 }
 
-//==========================================================================
-//
-// W_ReadFile
-//
-// Loads the lump into the given buffer, which must be >= W_LumpLength().
-//
-//==========================================================================
-
-void FileSystem::ReadFile (int lump, void *dest)
-{
-	auto lumpr = OpenFileReader (lump);
+void FileSystem::entry_read_into(LumpNum lump, void *dest) const {
+	auto lumpr = this->OpenFileReader(lump);
 	auto size = lumpr.GetLength ();
-	auto numread = lumpr.Read (dest, size);
+	auto numread = lumpr.Read(dest, size);
 
-	if (numread != size)
-	{
-		throw FileSystemException("W_ReadFile: only read %ld of %ld on '%s'\n",
-			numread, size, FileInfo[lump].LongName);
+	if (numread != size) {
+		throw FileSystemException(
+			"entry_read_into: only read %ld of %ld on '%s'\n", numread, size,
+			FileInfo[lump].LongName
+		);
 	}
 }
 
-
-//==========================================================================
-//
-// ReadFile - variant 2
-//
-// Loads the lump into a newly created buffer and returns it.
-//
-//==========================================================================
-
-FileData FileSystem::ReadFile (int lump)
-{
-	if ((unsigned)lump >= (unsigned)FileInfo.size())
-	{
+/// Loads the lump into a newly created buffer and returns it.
+FileData FileSystem::ReadFile(LumpNum lump) {
+	if ((unsigned)lump >= (unsigned)FileInfo.size()) {
 		throw FileSystemException("ReadFile: %u >= NumEntries", lump);
 	}
+
 	return FileInfo[lump].resfile->Read(FileInfo[lump].resindex);
 }
 
@@ -1293,11 +1243,8 @@ FileData FileSystem::ReadFile (int lump)
 //
 //==========================================================================
 
-
-FileReader FileSystem::OpenFileReader(int lump, int readertype, int readerflags)
-{
-	if ((unsigned)lump >= (unsigned)FileInfo.size())
-	{
+FileReader FileSystem::OpenFileReader(int lump, int readertype, int readerflags) const {
+	if ((unsigned)lump >= (unsigned)FileInfo.size()) {
 		throw FileSystemException("OpenFileReader: %u >= NumEntries", lump);
 	}
 
@@ -1305,16 +1252,14 @@ FileReader FileSystem::OpenFileReader(int lump, int readertype, int readerflags)
 	return file->GetEntryReader(FileInfo[lump].resindex, readertype, readerflags);
 }
 
-FileReader FileSystem::OpenFileReader(const char* name)
-{
+FileReader FileSystem::OpenFileReader(const char* name) {
 	FileReader fr;
 	auto lump = CheckNumForFullName(name);
 	if (lump >= 0) fr = OpenFileReader(lump);
 	return fr;
 }
 
-FileReader FileSystem::ReopenFileReader(const char* name, bool alwayscache)
-{
+FileReader FileSystem::ReopenFileReader(const char* name, bool alwayscache) {
 	FileReader fr;
 	auto lump = CheckNumForFullName(name);
 	if (lump >= 0) fr = ReopenFileReader(lump, alwayscache);
@@ -1362,11 +1307,6 @@ const char *FileSystem::GetResourceFileName (int rfnum) const noexcept
 	return (slash != nullptr && slash[1] != 0) ? slash+1 : name;
 }
 
-//==========================================================================
-//
-//
-//==========================================================================
-
 int FileSystem::GetFirstEntry (int rfnum) const noexcept
 {
 	if ((uint32_t)rfnum >= Files.size())
@@ -1377,11 +1317,6 @@ int FileSystem::GetFirstEntry (int rfnum) const noexcept
 	return Files[rfnum]->GetFirstEntry();
 }
 
-//==========================================================================
-//
-//
-//==========================================================================
-
 int FileSystem::GetLastEntry (int rfnum) const noexcept
 {
 	if ((uint32_t)rfnum >= Files.size())
@@ -1391,11 +1326,6 @@ int FileSystem::GetLastEntry (int rfnum) const noexcept
 
 	return Files[rfnum]->GetFirstEntry() + Files[rfnum]->EntryCount() - 1;
 }
-
-//==========================================================================
-//
-//
-//==========================================================================
 
 int FileSystem::GetEntryCount (int rfnum) const noexcept
 {

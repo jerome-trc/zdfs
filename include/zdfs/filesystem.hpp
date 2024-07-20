@@ -24,7 +24,7 @@ class FileSystem
 {
 public:
 	FileSystem(FileSystemMessageFunc);
-	~FileSystem ();
+	~FileSystem();
 
 	ZDFS_NODISCARD int GetIwadNum() const noexcept { return IwadIndex; }
 	void SetIwadNum(int x) noexcept { IwadIndex = x; }
@@ -32,71 +32,152 @@ public:
 	ZDFS_NODISCARD int GetMaxIwadNum() const noexcept { return MaxIwadIndex; }
 	void SetMaxIwadNum(int x) noexcept { MaxIwadIndex = x; }
 
-	bool init_single_file(const char *filename);
-	bool init_multiple_files (std::vector<std::string>& filenames, LumpFilterInfo* filter = nullptr, bool allowduplicates = false, FILE* hashfile = nullptr);
-	void AddFile (const char *filename, FileReader *wadinfo, LumpFilterInfo* filter, FileSystemMessageFunc Printf, FILE* hashfile);
-	int CheckIfResourceFileLoaded (const char *name) noexcept;
+	/// @throws FileSystemException if the given lump number is invalid.
+	ZDFS_NODISCARD FileData entry_data(LumpNum) const;
+
+	/// If the requested entry is absent, 0 will be returned (just as if the requested
+	/// entry exists but has no flags set), but `exists` will be set to `false`.
+	ZDFS_NODISCARD ELumpFlags entry_flags(LumpNum, bool& exists) const;
+
+	/// Returns the entry's full name if it has one or its short name if not.
+	/// Will return `NULL` if the given lump number is invalid.
+	ZDFS_NODISCARD const char* entry_fullname(LumpNum, bool returnshort = true) const;
+
+	/// Returns the buffer size needed to load the given lump.
+	///
+	/// If the requested entry is absent, 0 will be returned (just as if the requested
+	/// entry exists but has length 0), but `exists` will be set to `false`.
+	ZDFS_NODISCARD size_t entry_len(LumpNum, bool& exists) const;
+
+	/// Will return `NULL` if the given lump number is invalid.
+	ZDFS_NODISCARD const char* entry_shortname(LumpNum) const;
+
+	/// Loads the lump into `dest`, which must be backed by a buffer >= the entry's length.
+	/// @throws FileSystemException if the given lump number is invalid.
+	/// @throws FileSystemException if not all expected bytes get read.
+	void entry_read_into(LumpNum, void* dest) const;
+
+	bool init_multiple_files(
+		std::vector<std::string>& filenames,
+		LumpFilterInfo* filter = nullptr,
+		bool allowduplicates = false,
+		FILE* hashfile = nullptr
+	);
+
+	ZDFS_NODISCARD size_t num_entries() const {
+		return this->NumEntries;
+	}
+
+	ZDFS_NODISCARD size_t num_files() const {
+		return this->Files.size();
+	}
+
+	bool init_single_file(const char* filename);
+
+	void AddFile(
+		const char *filename,
+		FileReader *wadinfo,
+		LumpFilterInfo* filter,
+		FileSystemMessageFunc Printf,
+		FILE* hashfile
+	);
+
+	int CheckIfResourceFileLoaded(const char* name) noexcept;
+
+#if 0
 	void AddAdditionalFile(const char* filename, FileReader* wadinfo = NULL) {}
+#endif
 
 	const char *GetResourceFileName (int filenum) const noexcept;
 	const char *GetResourceFileFullName (int wadnum) const noexcept;
 
-	int GetFirstEntry(int wadnum) const noexcept;
-	int GetLastEntry(int wadnum) const noexcept;
-    int GetEntryCount(int wadnum) const noexcept;
+	ZDFS_NODISCARD LumpNum GetFirstEntry(int wadnum) const noexcept;
+	ZDFS_NODISCARD LumpNum GetLastEntry(int wadnum) const noexcept;
+    ZDFS_NODISCARD LumpNum GetEntryCount(int wadnum) const noexcept;
 
-	int CheckNumForName (const char *name, int namespc) const;
-	int CheckNumForName (const char *name, int namespc, int wadfile, bool exact = true) const;
-	int GetNumForName (const char *name, int namespc) const;
+	ZDFS_NODISCARD LumpNum CheckNumForName(const char *name, int namespc) const;
+	ZDFS_NODISCARD LumpNum CheckNumForName(const char *name, int namespc, int wadfile, bool exact = true) const;
+	ZDFS_NODISCARD LumpNum GetNumForName(const char *name, int namespc) const;
 
-	inline int CheckNumForName (const uint8_t *name) const { return CheckNumForName ((const char *)name, ns_global); }
-	inline int CheckNumForName (const char *name) const { return CheckNumForName (name, ns_global); }
-	inline int CheckNumForName (const uint8_t *name, int ns) const { return CheckNumForName ((const char *)name, ns); }
-	inline int GetNumForName (const char *name) const { return GetNumForName (name, ns_global); }
-	inline int GetNumForName (const uint8_t *name) const { return GetNumForName ((const char *)name); }
-	inline int GetNumForName (const uint8_t *name, int ns) const { return GetNumForName ((const char *)name, ns); }
+	ZDFS_NODISCARD inline LumpNum CheckNumForName(const uint8_t *name) const {
+		return CheckNumForName((const char *)name, ns_global);
+	}
 
-	int CheckNumForFullName (const char *cname, bool trynormal = false, int namespc = ns_global, bool ignoreext = false) const;
-	int CheckNumForFullName (const char *name, int wadfile) const;
-	int GetNumForFullName (const char *name) const;
-	int FindFile(const char* name) const
-	{
+	ZDFS_NODISCARD inline LumpNum CheckNumForName(const char* name) const {
+		return CheckNumForName(name, ns_global);
+	}
+
+	ZDFS_NODISCARD inline LumpNum CheckNumForName(const uint8_t* name, int ns) const {
+		return CheckNumForName((const char*)name, ns);
+	}
+
+	ZDFS_NODISCARD inline LumpNum GetNumForName(const char* name) const {
+		return GetNumForName(name, ns_global);
+	}
+
+	ZDFS_NODISCARD inline LumpNum GetNumForName(const uint8_t* name) const {
+		return GetNumForName((const char*)name);
+	}
+
+	ZDFS_NODISCARD inline LumpNum GetNumForName(const uint8_t* name, int ns) const {
+		return GetNumForName((const char*)name, ns);
+	}
+
+	ZDFS_NODISCARD int CheckNumForFullName(
+		const char *cname,
+		bool trynormal = false,
+		int namespc = ns_global,
+		bool ignoreext = false
+	) const;
+
+	int CheckNumForFullName(const char *name, int wadfile) const;
+
+	int GetNumForFullName(const char *name) const;
+
+	int FindFile(const char* name) const {
 		return CheckNumForFullName(name);
 	}
 
-	bool FileExists(const char* name) const
-	{
+	bool FileExists(const char* name) const {
 		return FindFile(name) >= 0;
 	}
 
-	bool FileExists(const std::string& name) const
-	{
+	bool FileExists(const std::string& name) const {
 		return FindFile(name.c_str()) >= 0;
 	}
 
-	LumpShortName& GetShortName(int i);	// may only be called before the hash chains are set up.
-	void RenameFile(int num, const char* fn);
+	/// May only be called before the hash chains are set up.
+	LumpShortName& GetShortName(LumpNum i);
+
+	void RenameFile(LumpNum num, const char* fn);
+
 	bool CreatePathlessCopy(const char* name, int id, int flags);
 
-	void ReadFile (int lump, void *dest);
 	// These should only be used if the file data really needs padding.
-	FileData ReadFile (int lump);
-	FileData ReadFile (const char *name) { return ReadFile (GetNumForName (name)); }
-	FileData ReadFileFullName(const char* name) { return ReadFile(GetNumForFullName(name)); }
+	FileData ReadFile(LumpNum lump);
 
-	FileReader OpenFileReader(int lump, int readertype, int readerflags);		// opens a reader that redirects to the containing file's one.
+	FileData ReadFile(const char *name) {
+		return ReadFile(GetNumForName(name));
+	}
+
+	FileData ReadFileFullName(const char* name) {
+		return ReadFile(GetNumForFullName(name));
+	}
+
+	// Opens a reader that redirects to that of the containing file.
+	FileReader OpenFileReader(LumpNum lump, int readertype, int readerflags) const;
+
 	FileReader OpenFileReader(const char* name);
+
 	FileReader ReopenFileReader(const char* name, bool alwayscache = false);
-	FileReader OpenFileReader(int lump)
-	{
+
+	FileReader OpenFileReader(int lump) const {
 		return OpenFileReader(lump, READER_SHARED, READERFLAG_SEEKABLE);
 	}
 
-	FileReader ReopenFileReader(int lump, bool alwayscache = false)
-	{
+	FileReader ReopenFileReader(int lump, bool alwayscache = false) {
 		return OpenFileReader(lump, alwayscache ? READER_CACHED : READER_NEW, READERFLAG_SEEKABLE);
 	}
-
 
 	int FindLump (const char *name, int *lastlump, bool anyns=false);		// [RH] Find lumps with duplication
 	int FindLumpMulti (const char **names, int *lastlump, bool anyns = false, int *nameindex = NULL); // same with multiple possible names
@@ -107,13 +188,8 @@ public:
 	int FindResource(int resid, const char* type, int filenum = -1) const noexcept;
 	int GetResource(int resid, const char* type, int filenum = -1) const;
 
-
 	static uint32_t LumpNameHash (const char *name);		// [RH] Create hash key from an 8-char name
 
-	ptrdiff_t FileLength (int lump) const;
-	int GetFileFlags (int lump);					// Return the flags for this lump
-	const char* GetFileShortName(int lump) const;
-	const char *GetFileFullName (int lump, bool returnshort = true) const;	// [RH] Returns the lump's full name
 	std::string GetFileFullPath (int lump) const;		// [RH] Returns wad's name + lump's full name
 	int GetFileContainer (int lump) const;				// [RH] Returns wadnum for a specified lump
 	int GetFileNamespace (int lump) const;			// [RH] Returns the namespace a lump belongs to
@@ -123,19 +199,9 @@ public:
 	bool CheckFileName (int lump, const char *name) const;	// [RH] Returns true if the names match
 	unsigned GetFilesInFolder(const char *path, std::vector<FolderEntry> &result, bool atomic) const;
 
-	int GetNumEntries() const
-	{
-		return NumEntries;
-	}
-
-	int GetNumWads() const
-	{
-		return (int)Files.size();
-	}
-
 	int AddFromBuffer(const char* name, char* data, int size, int id, int flags);
 	FileReader* GetFileReader(int wadnum);	// Gets a FileReader object to the entire WAD
-	void InitHashChains();
+	void init_hash_chains();
 
 protected:
 

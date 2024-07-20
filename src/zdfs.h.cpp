@@ -23,6 +23,44 @@ void zdfs_fs_free(const zdfs_FileSys* const fs) {
 	delete reinterpret_cast<const zdfs::FileSystem*>(fs);
 }
 
+/// Will return `NULL` if the given lump number is invalid.
+const char* zdfs_fs_entry_fullname(const zdfs_FileSys* fs_c, zdfs_LumpNum num) {
+	auto fs = reinterpret_cast<const zdfs::FileSystem*>(fs_c);
+	return fs->entry_fullname(num);
+}
+
+ZDFS_NODISCARD size_t zdfs_fs_entry_len(const zdfs_FileSys* fs_c, zdfs_LumpNum num, bool* exists) {
+	auto fs = reinterpret_cast<const zdfs::FileSystem*>(fs_c);
+	return fs->entry_len(num, *exists);
+}
+
+ZDFS_NODISCARD zdfs_EntryFlags zdfs_fs_entry_flags(const zdfs_FileSys* fs_c, zdfs_LumpNum num, bool* exists) {
+	auto fs = reinterpret_cast<const zdfs::FileSystem*>(fs_c);
+	return fs->entry_flags(num, *exists);
+}
+
+bool zdfs_fs_entry_read(const zdfs_FileSys* fs_c, zdfs_LumpNum num, void* dest) {
+	auto fs = reinterpret_cast<const zdfs::FileSystem*>(fs_c);
+
+	try {
+		fs->entry_read_into(num, dest);
+		return true;
+	} catch (...) {
+		return false;
+	}
+}
+
+/// Will return `NULL` if the given lump number is invalid.
+const char* zdfs_fs_entry_shortname(const zdfs_FileSys* fs_c, zdfs_LumpNum num) {
+	auto fs = reinterpret_cast<const zdfs::FileSystem*>(fs_c);
+	return fs->entry_shortname(num);
+}
+
+void zdfs_fs_init_hash_chains(zdfs_FileSys* fs_c) {
+	auto fs = reinterpret_cast<zdfs::FileSystem*>(fs_c);
+	fs->init_hash_chains();
+}
+
 bool zdfs_fs_mount(zdfs_FileSys* fs_c, const char* path) {
 	auto fs = reinterpret_cast<zdfs::FileSystem*>(fs_c);
 	return fs->init_single_file(path);
@@ -37,6 +75,18 @@ bool zdfs_fs_mount_multi(
 	auto vec = reinterpret_cast<std::vector<std::string>*>(vec_c);
 	return fs->init_multiple_files(*vec);
 }
+
+size_t zdfs_fs_num_entries(const zdfs_FileSys* fs_c) {
+	auto fs = reinterpret_cast<const zdfs::FileSystem*>(fs_c);
+	return fs->num_entries();
+}
+
+size_t zdfs_fs_num_files(const zdfs_FileSys* fs_c) {
+	auto fs = reinterpret_cast<const zdfs::FileSystem*>(fs_c);
+	return fs->num_files();
+}
+
+// zdfs_StringVector methods ///////////////////////////////////////////////////
 
 zdfs_StringVector* zdfs_strvec_new(size_t capacity) {
 	return reinterpret_cast<zdfs_StringVector*>(new std::vector<std::string>());

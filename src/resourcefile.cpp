@@ -679,6 +679,7 @@ FileReader FResourceFile::GetEntryReader(uint32_t entry, int readertype, int rea
 			{
 				if (readertype == READER_SHARED && !mainThread)
 					readertype = READER_NEW;
+
 				if (readertype == READER_SHARED)
 				{
 					fr.OpenFilePart(Reader, Entries[entry].Position, Entries[entry].Length);

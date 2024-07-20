@@ -75,8 +75,9 @@ typedef enum {
 	ns_firstskin,
 } namespace_t;
 
-enum ELumpFlags
+enum ELumpFlags : uint16_t
 {
+	RESFF_NONE = 0,
 	RESFF_MAYBEFLAT = 1,	// might be a flat inside a WAD outside F_START/END
 	RESFF_FULLPATH = 2,		// contains a full path. This will trigger extended namespace checks when looking up short names.
 	RESFF_EMBEDDED = 4,		// marks an embedded resource file for later processing.
@@ -157,21 +158,21 @@ public:
 	int EntryCount() const { return NumLumps; }
 	int FindEntry(const char* name);
 
-	size_t Length(uint32_t entry)
-	{
+	size_t Length(uint32_t entry) const {
 		return (entry < NumLumps) ? Entries[entry].Length : 0;
 	}
-	size_t Offset(uint32_t entry)
-	{
+
+	size_t Offset(uint32_t entry) const {
 		return (entry < NumLumps) ? Entries[entry].Position : 0;
 	}
 
 	// default is the safest reader type.
 	virtual FileReader GetEntryReader(uint32_t entry, int readertype = READER_NEW, int flags = READERFLAG_SEEKABLE);
 
-	int GetEntryFlags(uint32_t entry)
-	{
-		return (entry < NumLumps) ? Entries[entry].Flags : 0;
+	ELumpFlags GetEntryFlags(uint32_t entry) const {
+		return static_cast<ELumpFlags>(
+			(entry < NumLumps) ? Entries[entry].Flags : 0
+		);
 	}
 
 	int GetEntryNamespace(uint32_t entry)
